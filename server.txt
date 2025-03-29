@@ -36,6 +36,8 @@ you can set the socket to non-blocking, will return a value to say it missed, wa
 
 poll() = synchronous IO multiplexing 
     will let us know when data is ready on which socket 
+
+
     
 
 

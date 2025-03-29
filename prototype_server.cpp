@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <thread>
 #include <atomic>
+#include <poll.h>
 
 #define PORT_NUMBER 8080
 
@@ -106,21 +107,41 @@ int main(){
     // Launch a separate thread to monitor for "exit" command
     std::thread shutdownThread(monitorShutdown);
 
+
+
+    // Configure pollfd structure for monitoring the server socket
+    struct pollfd fds[1];
+    fds[0].fd = serverSocket;
+    fds[0].events = POLLIN;  // We're interested in the "read" event (new connections).
+
+
+
     while (serverRunning) {
-        // accepting connection request
-        int clientSocket = accept(serverSocket, nullptr, nullptr);
 
-        //accept blocks here, meaning when the server is shutdown via command line, another client must connect to proceed and shutdown 
-        //fixable via multiplexing? 
+        // Use poll() with a timeout of 0 to make it non-blocking (instant return)
+        int ret = poll(fds, 1, 0);  // Timeout of 0ms means no blocking, instant return
 
-        if (clientSocket == -1) {
-            std::cerr << "Failed to accept connection" << std::endl;
-            continue;
+        if (ret == -1) {
+            std::cerr << "Error with poll()" << std::endl;
+            break;
         }
 
-        // Handle the client connection in a separate thread
-        std::thread clientThread(handleClient, clientSocket);
-        clientThread.detach();  // Detach the thread to handle it asynchronously
+
+
+        // Check if the server socket is ready to accept a connection
+        if (fds[0].revents & POLLIN) {
+            // The socket is ready to accept a connection
+            int clientSocket = accept(serverSocket, nullptr, nullptr);
+
+            if (clientSocket == -1) {
+                std::cerr << "Failed to accept connection" << std::endl;
+                continue;
+            }
+
+            // Handle the client connection in a separate thread
+            std::thread clientThread(handleClient, clientSocket);
+            clientThread.detach();  // Detach the thread to handle it asynchronously
+        }
     }
 
 
