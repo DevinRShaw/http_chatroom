@@ -82,9 +82,10 @@ void handleClient(int clientSocket){
 
     //TODO FIX
         //disconnecting causes infinite messages
-    while(serverRunning){
+    while(serverRunning ){
 
         char buffer[1024] = {0};
+        //need to add logic to check if connection is terminated 
         recv(clientSocket, buffer, sizeof(buffer), 0);
     
         std::cout << "Message from client: " << buffer << std::endl;
