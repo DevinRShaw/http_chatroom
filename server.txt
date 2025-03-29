@@ -35,10 +35,10 @@ blocking = waiting for input to happen
 you can set the socket to non-blocking, will return a value to say it missed, wastes CPU time tho 
 
 poll() = synchronous IO multiplexing 
-    will let us know when data is ready on which socket 
+    will let us know when data is ready on which socket, used this to handle the blocking accept part of the code 
 
 
-    
+
 
 
 

@@ -12,7 +12,7 @@
 
 std::atomic<bool> serverRunning(true);
 
-int setUpServer(void){
+int setUpServer(){
     // creating socket
     int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -20,6 +20,10 @@ int setUpServer(void){
         std::cerr << "Failed to create socket" << std::endl;
         return 1;
     }
+
+    //this allows us to restart the server quickly without failiure to bind error
+    int optval =  1;
+    setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval);
 
     // specifying the address
     sockaddr_in serverAddress;
@@ -47,7 +51,6 @@ int setUpServer(void){
 }
 
 
-//maybe keep this to work around the blocking issue with accept 
 void monitorShutdown(){
     std::string input;
     while (serverRunning) {
@@ -56,6 +59,9 @@ void monitorShutdown(){
             std::cout << "Shutting down the server..." << std::endl;
             serverRunning = false;
         }
+        else {
+            std::cout << input << " not recognized as command" << std::endl;
+        }
     }
 }
 
@@ -63,19 +69,21 @@ void monitorShutdown(){
 
 
 void handleClient(int clientSocket){ 
+     // HTTP response
+     const char* httpResponse = 
+     "HTTP/1.1 200 OK\r\n"
+     "Content-Type: text/html\r\n"
+     "Connection: close\r\n\r\n"
+     "<html><body><p>Hello, World!</p></body></html>";
+
+    // sending HTTP response
+    send(clientSocket, httpResponse, std::strlen(httpResponse), 0);
+
+
+    //TODO FIX
+        //disconnecting causes infinite messages
     while(serverRunning){
 
-        // HTTP response
-        const char* httpResponse = 
-            "HTTP/1.1 200 OK\r\n"
-            "Content-Type: text/html\r\n"
-            "Connection: close\r\n\r\n"
-            "<html><body><h1>Hello, World!</h1></body></html>";
-
-        // sending HTTP response
-        send(clientSocket, httpResponse, std::strlen(httpResponse), 0);
-
-        // receiving data
         char buffer[1024] = {0};
         recv(clientSocket, buffer, sizeof(buffer), 0);
     
@@ -83,18 +91,14 @@ void handleClient(int clientSocket){
 
         std::memset(buffer, 0, sizeof(buffer));  // Clears the buffer
         
-
-        //handle the broadcast logic later, maybe keep a atomic list of client sockets? 
+        //handle the broadcast logic later, maybe keep a mutex style list of client sockets? 
+        
     }
-    
+ 
 
-    // closing the client socket
+    // closing the client socket 
     close(clientSocket);
 }
-
-
-
-
 
 
 
@@ -119,19 +123,22 @@ int main(){
     while (serverRunning) {
 
         // Use poll() with a timeout of 0 to make it non-blocking (instant return)
-        int ret = poll(fds, 1, 0);  // Timeout of 0ms means no blocking, instant return
+        int ret = poll(fds, 1, 1);  // Timeout of 0ms means no blocking, instant return
 
         if (ret == -1) {
             std::cerr << "Error with poll()" << std::endl;
             break;
         }
 
-
-
         // Check if the server socket is ready to accept a connection
         if (fds[0].revents & POLLIN) {
+
             // The socket is ready to accept a connection
             int clientSocket = accept(serverSocket, nullptr, nullptr);
+            
+            //TODO FIX
+                //this is printing multiple times per client
+            std::cout << "connection made" << std::endl;
 
             if (clientSocket == -1) {
                 std::cerr << "Failed to accept connection" << std::endl;
@@ -139,12 +146,13 @@ int main(){
             }
 
             // Handle the client connection in a separate thread
+            //TODO FEATURE 
+                //this could be handled better with poll() or async with epoll instead of threading at all 
             std::thread clientThread(handleClient, clientSocket);
             clientThread.detach();  // Detach the thread to handle it asynchronously
         }
+
     }
-
-
 
     // Closing the server socket after the server has stopped
     close(serverSocket);
