@@ -1,0 +1,43 @@
+we have sockets and their various functions 
+
+    BEEJS GUIDE - Unix Standard C library 
+        5.1 getaddrinfo()—Prepare to launch!
+        5.2 socket()—Get the File Descriptor!
+        5.3 bind()—What port am I on?
+        5.4 connect()—Hey, you!
+        5.5 listen()—Will somebody please call me?
+        5.6 accept()—“Thank you for calling port 3490.”
+        5.7 send() and recv()—Talk to me, baby!
+        5.8 sendto() and recvfrom()—Talk to me, DGRAM-style
+        5.9 close() and shutdown()—Get outta my face!
+        5.10 getpeername()—Who are you?
+        5.11 gethostname()—Who am I?
+
+
+if we want concurrency we can use threads to handle multiple tasks
+
+    basic example from geeks for geeks 
+
+        void handleClient(params)
+            { 
+                Statements; 
+            }
+
+        // The parameters to the function are put after the comma
+        std::thread thread_obj(handleClient, params);
+
+        //joining the thread will block until thread is done, detach allows thread to run seperate 
+
+
+
+blocking = waiting for input to happen 
+
+you can set the socket to non-blocking, will return a value to say it missed, wastes CPU time tho 
+
+poll() = synchronous IO multiplexing 
+    will let us know when data is ready on which socket 
+    
+
+
+
+
