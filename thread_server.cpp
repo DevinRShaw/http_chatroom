@@ -12,6 +12,7 @@
 
 std::atomic<bool> serverRunning(true);
 
+//this is fine just sets up socket to take connections 
 int setUpServer(){
     // creating socket
     int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -67,14 +68,23 @@ void monitorShutdown(){
 
 
 
-
+//this is a threaded method, will be easier to handle username aspect with this, can not yet see how to track user with polling type connection
 void handleClient(int clientSocket){ 
      // HTTP response
      const char* httpResponse = 
-     "HTTP/1.1 200 OK\r\n"
-     "Content-Type: text/html\r\n"
-     "Connection: close\r\n\r\n"
-     "<html><body><p>Hello, World!</p></body></html>";
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: text/html\r\n"
+        "Connection: close\r\n\r\n"
+        "<html>"
+            "<body>"
+            "<form action=\"/submit\" method=\"post\">"
+                "<label for=\"name\">Enter your name:</label>"
+                "<input type=\"text\" id=\"name\" name=\"name\" required>"
+                "<button type=\"submit\">Submit</button>"
+            "</form>"
+            "</body>"
+        "</html>";
+
 
     // sending HTTP response
     send(clientSocket, httpResponse, std::strlen(httpResponse), 0);
@@ -82,10 +92,10 @@ void handleClient(int clientSocket){
 
     //TODO FIX
         //disconnecting causes infinite messages
-    while(serverRunning ){
+    if (serverRunning){
 
         char buffer[1024] = {0};
-        //need to add logic to check if connection is terminated 
+        //need to add logic to check if connection is terminated / no input and block on that 
         recv(clientSocket, buffer, sizeof(buffer), 0);
     
         std::cout << "Message from client: " << buffer << std::endl;
@@ -95,6 +105,8 @@ void handleClient(int clientSocket){
         //handle the broadcast logic later, maybe keep a mutex style list of client sockets? 
         
     }
+
+
  
 
     // closing the client socket 
@@ -139,6 +151,7 @@ int main(){
             
             //TODO FIX
                 //this is printing multiple times per client
+
             std::cout << "connection made" << std::endl;
 
             if (clientSocket == -1) {
@@ -149,6 +162,7 @@ int main(){
             // Handle the client connection in a separate thread
             //TODO FEATURE 
                 //this could be handled better with poll() or async with epoll instead of threading at all 
+                //handle http parsing and return to this later for now 
             std::thread clientThread(handleClient, clientSocket);
             clientThread.detach();  // Detach the thread to handle it asynchronously
         }

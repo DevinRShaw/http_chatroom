@@ -38,8 +38,154 @@ poll() = synchronous IO multiplexing
     will let us know when data is ready on which socket, used this to handle the blocking accept part of the code 
 
 
+note: c strings aka char* 
 
 
 
 
 
+HTTP PARSING
+
+EXAMPLE TO PARSE
+
+    POST /submit HTTP/1.1\r\n
+    Host: localhost:8080\r\n
+    Connection: keep-alive\r\n
+    Content-Length: 9\r\n
+    Cache-Control: max-age=0\r\n
+    sec-ch-ua: "Chromium";v="134", "Not:A-Brand";v="24", "Google Chrome";v="134"\r\n
+    sec-ch-ua-mobile: ?0\r\n
+    sec-ch-ua-platform: "Windows"\r\n
+    Origin: http://localhost:8080\r\n
+    Content-Type: application/x-www-form-urlencoded\r\n
+    Upgrade-Insecure-Requests: 1\r\n
+    User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36\r\n
+    Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7\r\n
+    Sec-Fetch-Site: same-origin\r\n
+    Sec-Fetch-Mode: navigate\r\n
+    Sec-Fetch-User: ?1\r\n
+    Sec-Fetch-Dest: document\r\n
+    Referer: http://localhost:8080/\r\n
+    Accept-Encoding: gzip, deflate, br, zstd\r\n
+    Accept-Language: en-US,en;q=0.9\r\n
+    \r\n
+    name=test
+              
+
+
+
+
+    STRATEGY HTTP PARSING 
+
+
+    STREAMS ARE KEY 
+
+        TAKE EACH LINE WHICH IS SEPERATED BY \n escape sequence 
+            handled by converting the message to a stream so we can use getline on that 
+
+            #include <sstream>
+            #include <iostream>
+
+            int main() {
+                std::istringstream f("line1\nline2\nline3");
+                std::string line;  
+
+                while (std::getline(f, line)) {
+                    std::cout << line << std::endl;
+                }
+            }
+
+
+    CODE EXPLANATION 
+
+            USE A struct TO HANDLE ALL THIS 
+
+                struct HttpRequest {
+                    std::string method;
+                    std::string path;
+                    std::string version;
+                    std::map<std::string, std::string> headers;
+                    std::string body;
+                };
+
+
+            STREAMS ALLOW US TO HANDLE THE REQUEST LINE BY LINE 
+            ISTREAM IS AN INPUT STREAM, TAKES REQUEST AS INPUT AND CREATES A STREAM 
+
+                EACH LINE CAN BE ACCESSED VIA GELTINE SINCE IT IS NOW A STREAM
+                LINE IS STRING WE WILL USE A PLACEHOLDER FOR EACH LINE IN THAT STREAM 
+
+                std::istringstream requestStream(request);
+                std::string line;
+            
+                GETLINE GETS THE LINE THEN >> ALLOWS US TO SPLIT ON WHITESPACE 
+
+                if (std::getline(requestStream, line)) {
+                    std::istringstream lineStream(line);
+                    lineStream >> httpRequest.method >> httpRequest.path >> httpRequest.version;
+                }
+
+
+                TAKE EACH LINE WITH GETLINE
+                STRING HANDLING FROM C++ IN USE HERE 
+
+                while (std::getline(requestStream, line) && line != "\r") {
+                    size_t colonPos = line.find(": ");
+                    if (colonPos != std::string::npos) {
+                        std::string key = line.substr(0, colonPos);
+                        std::string value = line.substr(colonPos + 2);
+                        if (!value.empty() && value.back() == '\r') value.pop_back();  // Remove '\r'
+                        httpRequest.headers[key] = value;
+                    }
+                }
+
+
+                PARSE THE BODY LINE WITH GETLINE BUT NOW USE OUTPUT STREAM TO MOVE THE LINE IN 
+
+                std::ostringstream bodyStream;
+                while (std::getline(requestStream, line)) {
+                    bodyStream << line << "\n";
+                }
+                
+                httpRequest.body = bodyStream.str();
+                if (!httpRequest.body.empty() && httpRequest.body.back() == '\n') {
+                    httpRequest.body.pop_back();  // Remove trailing '\n'
+                }
+
+                return httpRequest;
+
+
+
+
+
+
+
+
+
+
+            
+
+        
+
+
+
+
+
+
+
+
+
+
+TODO IDEAS 
+
+    POLL BASED INSTEAD OF THREAD BASED 
+        MULTIPLEXING FOR HANLDING MULTIPLE CLIENTS 
+
+        keep a dynamic vector of socket fds to poll on, the first is the server, rest are client connections 
+        to track usernames in this structure try to use a map of <socket, username>, when a message to chat room is recieved append "username: {message}"
+
+
+    SERVING FORM AND BROADCASTING ANSWERS 
+
+
+    look at source code, tutorials and documentation
