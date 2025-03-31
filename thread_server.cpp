@@ -107,8 +107,6 @@ void handleClient(int clientSocket){
     }
 
 
- 
-
     // closing the client socket 
     close(clientSocket);
 }

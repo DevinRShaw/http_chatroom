@@ -183,9 +183,48 @@ TODO IDEAS
 
         keep a dynamic vector of socket fds to poll on, the first is the server, rest are client connections 
         to track usernames in this structure try to use a map of <socket, username>, when a message to chat room is recieved append "username: {message}"
+        when the server is no longer running, we can iterate through the map keys and close each connection 
 
 
     SERVING FORM AND BROADCASTING ANSWERS 
+        if username is not set yet in the map for their client socket, then first message is the username, if username not in values yet it is valid, we can add that later though
+
+        if username is set, then all messages following that are chat messages 
 
 
     look at source code, tutorials and documentation
+
+
+
+STRATEGY 
+
+    SET UP SERVER 
+
+    CREATE A POLL OF SOCKETS 
+        FIRST SOCKET IS SERVER SOCKET 
+        REST ARE CLIENTS
+
+    MONITOR FIRST POLL SERVER SOCKET FOR NEW CONNECTIONS
+        ADD CLIENT SOCKETS TO THE POLL AND LISTEN FOR MESSAGES
+
+    MAP OF SOCKETS AND USERNAMES
+
+    IF SOCKET HAS NO USERNAME IN MAP        
+        MESSAGE IS USERNAME 
+        IF USERNAME NOT IN VALUES OF MAP ALREADY WE SET IT 
+        ELSE WE GIVE NOTIFICATION THAT IT IS NOT CORRECT 
+
+    ELSE SOCKET HAS USERNAME 
+        MESSAGE IS A CHAT MESSAGE 
+
+        BROADCAST MESSAGE TO ALL SOCKETS IN THE MAP 
+
+
+
+BLOCKS 
+
+    JAVASCRIPT IN THE BROWSER TO HANDLE UPDATING CHAT ROOM HTML WITH BROADCASTS 
+        HTML FORM SUBMITS USERNAME, HTML FORM WILL LINK TO THE CHAT ROOM, IF YOUR SOCKET DOES NOT HAVE A USERNAME YOU WILL BE SENT THE FORM WITH A WARNING ON THAT 
+
+        NEED TO KEEP A LIST OF JAVASCRIPT LISTENING SOCKETS, WHEN BROADCAST OCCURS SEND TO THE JAVASCRIPT SOCKETS 
+        
