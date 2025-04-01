@@ -111,7 +111,7 @@ void handleClient(int clientSocket) {
 
         send(clientSocket, httpResponse, std::strlen(httpResponse), 0);
     } 
-    
+
     else if (clientResponse.method == "POST") {
         std::cout << "Message from client: " << buffer << std::endl;
         // Handle the form submission
@@ -162,7 +162,7 @@ int main(){
 
 
     // Launch a separate thread to monitor for "exit" command
-    std::thread shutdownThread(commandServer);
+    std::thread commandThread(commandServer);
 
 
     // Configure pollfd structure for monitoring the server socket
@@ -226,7 +226,7 @@ int main(){
     close(serverSocket);
 
     // Wait for the shutdown thread to finish
-    shutdownThread.join();
+    commandThread.join();
 
     std::cout << "Server shutdown successfully." << std::endl;
 
