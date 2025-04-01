@@ -18,7 +18,7 @@ struct HttpRequest {
 
 
 // possible optimization here in the parameter as a reference? Less copying?
-std::map<std::string, std::string> parseRawBody(HttpRequest& httpRequest){
+std::map<std::string, std::string> parseRawBody(HttpRequest httpRequest){
         enum body_state {
             KEY,
             VALUE

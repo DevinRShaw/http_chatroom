@@ -7,6 +7,8 @@
 #include <atomic>
 #include <poll.h>
 
+#include "http_parsing.h"
+
 #define PORT_NUMBER 8080
 
 
@@ -52,14 +54,14 @@ int setUpServer(){
 }
 
 
-void monitorShutdown(){
+void commandServer(){
     std::string input;
     while (serverRunning) {
         std::getline(std::cin, input);
-        if (input == "quit") {
+        if (input == "quit" || input == "exit") {
             std::cout << "Shutting down the server..." << std::endl;
             serverRunning = false;
-        }
+        } 
         else {
             std::cout << input << " not recognized as command" << std::endl;
         }
@@ -69,45 +71,57 @@ void monitorShutdown(){
 
 
 //this is a threaded method, will be easier to handle username aspect with this, can not yet see how to track user with polling type connection
-void handleClient(int clientSocket){ 
-     // HTTP response
-     const char* httpResponse = 
-        "HTTP/1.1 200 OK\r\n"
-        "Content-Type: text/html\r\n"
-        "Connection: close\r\n\r\n"
-        "<html>"
-            "<body>"
-            "<form action=\"/submit\" method=\"post\">"
-                "<label for=\"name\">Enter your name:</label>"
-                "<input type=\"text\" id=\"name\" name=\"name\" required>"
-                "<button type=\"submit\">Submit</button>"
-            "</form>"
-            "</body>"
-        "</html>";
-
-
-    // sending HTTP response
-    send(clientSocket, httpResponse, std::strlen(httpResponse), 0);
-
-
-    //TODO FIX
-        //disconnecting causes infinite messages
-    if (serverRunning){
-
-        char buffer[1024] = {0};
-        //need to add logic to check if connection is terminated / no input and block on that 
-        recv(clientSocket, buffer, sizeof(buffer), 0);
+void handleClient(int clientSocket) {
     
-        std::cout << "Message from client: " << buffer << std::endl;
+    while(serverRunning){
+        char buffer[1024] = {0};
+        recv(clientSocket, buffer, sizeof(buffer), 0);
 
-        std::memset(buffer, 0, sizeof(buffer));  // Clears the buffer
         
-        //handle the broadcast logic later, maybe keep a mutex style list of client sockets? 
-        
+
+        HttpRequest clientResponse = parseHttpRequest(buffer);
+
+        // Check if it's a GET or POST request
+        if (clientResponse.method == "GET") {
+            std::cout << "Message from client: " << buffer << std::endl;
+            // Respond with the HTML form
+            const char* httpResponse = 
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: text/html\r\n"
+                "Connection: keep-alive\r\n\r\n"
+                "<html>"
+                    "<body>"
+                        "<form action=\"/submit\" method=\"post\">"
+                            "<label for=\"name\">Enter your name:</label>"
+                                "<input type=\"text\" id=\"name\" name=\"name\" required>"
+                            "<button type=\"submit\">Submit</button>"
+                        "</form>"
+                    "</body>"
+                "</html>";
+
+            send(clientSocket, httpResponse, std::strlen(httpResponse), 0);
+        } 
+        else if (clientResponse.method == "POST") {
+            std::cout << "Message from client: " << buffer << std::endl;
+            // Handle the form submission
+            std::string username = clientResponse.parsed_body["name"];
+
+            // Respond with the greeting
+            std::string response = "HTTP/1.1 200 OK\r\n";
+            response += "Content-Type: text/html\r\n";
+            response += "Connection: keep-alive\r\n\r\n";
+            response += "<html><body><h1>Hello, " + username + "!</h1></body></html>";
+            // Add the form after the greeting
+            response += "<form action=\"/submit\" method=\"post\">"
+                            "<label for=\"name\">Enter your name:</label>"
+                                "<input type=\"text\" id=\"name\" name=\"name\" required>"
+                            "<button type=\"submit\">Submit</button>"
+                        "</form>";
+
+            send(clientSocket, response.c_str(), std::strlen(response.c_str()), 0);
+        }
     }
-
-
-    // closing the client socket 
+    // Close the socket after handling the request
     close(clientSocket);
 }
 
@@ -120,7 +134,7 @@ int main(){
 
 
     // Launch a separate thread to monitor for "exit" command
-    std::thread shutdownThread(monitorShutdown);
+    std::thread shutdownThread(commandServer);
 
 
 
